@@ -8,7 +8,6 @@ const Navbar = () => {
   const location = useLocation();
 
   const navItems = [
-    { name: 'Home', href: '/', icon: Shield },
     { name: 'Scanner', href: '/scanner', icon: BarChart3 },
   ];
 

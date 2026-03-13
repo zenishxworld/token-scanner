@@ -7,9 +7,9 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto px-4 py-12 flex flex-col md:flex-row gap-12 md:gap-0 md:justify-between">
         {/* Left Column */}
         <div className="md:w-1/3 flex flex-col items-start mb-8 md:mb-0">
-          <span className="text-2xl font-bold mb-2">TokenShield AI</span>
-          <p className="text-muted-foreground mb-4 max-w-xs">
-            AI-powered token scanning to detect pump-and-dump risk signals before you invest.
+          <span className="text-2xl font-bold mb-2">TokenShield AI Security Engine v1.0</span>
+          <p className="text-muted-foreground mb-4 max-w-sm">
+            Analyzing blockchain behavior patterns to detect early signs of pump-and-dump token manipulation.
           </p>
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
