@@ -1,0 +1,10 @@
+# AuditX - Blockchain Security Platform
+# https://www.theauditx.com
+
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /dashboard/
+
+# Sitemap
+Sitemap: https://www.theauditx.com/sitemap.xml
