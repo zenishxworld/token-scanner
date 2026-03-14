@@ -41,7 +41,7 @@ const Footer = () => {
       </div>
       <hr className="border-border" />
       <div className="py-4 text-center text-xs text-muted-foreground">
-        © 2026 TokenShield AI. All rights reserved.
+        © 2026 TokenShield AI. Build for Tech Arambh 2.0. Team ApexDeploy.
       </div>
     </footer>
   );
