@@ -106,9 +106,11 @@ interface AnalysisResult {
     ageHours: string;
   };
   riskScore: number;
+  riskPercent: number;
   riskLevel: string;
   pumpDumpDetection: string;
   riskFactors: number;
+  totalRiskFactors: number;
   analysis: {
     liquidityLocked: boolean;
     whaleDistribution: number;
@@ -209,7 +211,7 @@ const Scanner = () => {
 
     if (!tokenData) {
       return {
-        riskFactors: 5,
+        riskFactors: 10,
         pumpDumpDetection: '❌ Critical Risk - Token Not Found',
         warnings: [
           {
@@ -228,7 +230,7 @@ const Scanner = () => {
     const volume24h = tokenData.volume?.h24 || 0;
 
     if (Math.abs(priceChange1h) >= 30) {
-      riskFactors++;
+      riskFactors += Math.abs(priceChange1h) >= 50 ? 2 : 1.5;
       warnings.push({
         type: 'Extreme 1h Price Movement',
         description: `Price changed ${priceChange1h.toFixed(2)}% in 1 hour. Classic pump & dump pattern.`,
@@ -236,57 +238,73 @@ const Scanner = () => {
       });
     }
 
-    if (priceChange24h >= 300) {
-      riskFactors++;
+    if (priceChange24h >= 200) {
+      riskFactors += priceChange24h >= 400 ? 2 : 1.5;
       warnings.push({
         type: 'Massive 24h Gain',
         description: `${priceChange24h.toFixed(2)}% gain in 24h indicates potential pump scheme.`,
         severity: 'Critical',
       });
+    } else if (priceChange24h <= -50) {
+      riskFactors += priceChange24h <= -80 ? 2 : 1;
+      warnings.push({
+        type: 'Massive 24h Drop',
+        description: `Price plummeted by ${Math.abs(priceChange24h).toFixed(2)}% in 24h. Possible dump in progress or completed.`,
+        severity: 'Critical',
+      });
     }
 
-    if (marketCap < 5000000) {
-      riskFactors++;
+    if (marketCap < 2000000) {
+      riskFactors += marketCap < 500000 ? 2 : 1;
       warnings.push({
         type: 'Low Market Cap',
-        description: `Market cap under $5M ($${marketCap.toLocaleString()}) makes token vulnerable to manipulation.`,
+        description: `Market cap under $2M ($${marketCap.toLocaleString()}) makes token vulnerable to manipulation.`,
         severity: 'High',
       });
     }
 
-    if (liquidity < 100000) {
-      riskFactors++;
+    if (liquidity < 50000) {
+      riskFactors += liquidity < 10000 ? 2.5 : 1.5;
       warnings.push({
         type: 'Low Liquidity',
-        description: `Liquidity under $100K ($${liquidity.toLocaleString()}) creates high slippage risk.`,
-        severity: 'High',
+        description: `Liquidity under $50K ($${liquidity.toLocaleString()}) creates massive slippage risk.`,
+        severity: 'Critical',
       });
     }
 
-    if (ageHours < 72) {
-      riskFactors++;
+    if (ageHours < 48) {
+      riskFactors += ageHours < 12 ? 2.5 : 1.5;
       warnings.push({
         type: 'New Token',
-        description: `Token is only ${ageHours.toFixed(1)} hours old. New tokens are high risk.`,
-        severity: 'Medium',
+        description: `Token is very new (${ageHours.toFixed(1)} hours). Extreme risk of rug pull.`,
+        severity: 'High',
       });
     }
 
     const volumeToMarketCapRatio = marketCap > 0 ? volume24h / marketCap : 0;
-    if (volumeToMarketCapRatio > 3) {
-      riskFactors++;
+    if (volumeToMarketCapRatio > 1.5) {
+      riskFactors += volumeToMarketCapRatio > 5 ? 2 : 1.5;
       warnings.push({
         type: 'Abnormal Trading Volume',
-        description: `Volume/MarketCap ratio of ${volumeToMarketCapRatio.toFixed(2)} suggests artificial trading.`,
+        description: `Volume/MarketCap ratio of ${volumeToMarketCapRatio.toFixed(2)} suggests artificial wash trading.`,
+        severity: 'High',
+      });
+    } else if (volume24h < 1000) {
+      riskFactors += 1;
+      warnings.push({
+        type: 'Dead Token',
+        description: `Extremely low 24h volume ($${volume24h.toLocaleString()}). Token may be dead or abandoned.`,
         severity: 'High',
       });
     }
 
     let pumpDumpDetection: string;
-    if (riskFactors >= 3) {
-      pumpDumpDetection = '❌ High Risk of Pump and Dump';
-    } else if (riskFactors === 2) {
-      pumpDumpDetection = '⚠️ Moderate Risk';
+    if (riskFactors >= 6) {
+      pumpDumpDetection = '❌ Critical Risk of Pump and Dump';
+    } else if (riskFactors >= 4) {
+      pumpDumpDetection = '⚠️ High Risk';
+    } else if (riskFactors >= 2) {
+      pumpDumpDetection = '🟡 Moderate Risk';
     } else {
       pumpDumpDetection = '✅ Low Risk';
     }
@@ -301,24 +319,39 @@ const Scanner = () => {
 
     const detection = detectPumpAndDump(tokenData, ageHours);
 
-    const liquidityLocked = tokenData?.liquidity?.usd ? tokenData.liquidity.usd > 25000 : false;
-    const whaleDistribution =
-      tokenData?.liquidity?.usd && tokenData.liquidity.usd < 50000
-        ? 70 + Math.random() * 20
-        : 20 + Math.random() * 30;
-    const honeypotRisk = !liquidityLocked && (tokenData?.priceChange?.h24 || 0) > 30;
-    const priceManipulation = Math.abs(tokenData?.priceChange?.h24 || 0) > 50;
-    const volumeToMarketCapRatio =
-      tokenData?.marketCap && tokenData?.volume?.h24 ? tokenData.volume.h24 / tokenData.marketCap : 0;
+    // Make parameters dynamic based on actual API data to ensure 0-100 full range
+    const liquidityLocked = tokenData?.liquidity?.usd ? tokenData.liquidity.usd > 100000 : false;
+    
+    // Simulate some real factors based on actual data
+    let whaleDistRaw = 20; // base healthy
+    if (tokenData?.liquidity?.usd && tokenData.liquidity.usd < 100000) whaleDistRaw += 30; // low liq -> usually high concentration
+    if (tokenData?.marketCap && tokenData.marketCap < 2000000) whaleDistRaw += 20; 
+    const whaleDistribution = Math.min(98, Math.max(12, whaleDistRaw + (Math.random() * 15 - 7))); // dynamic
 
-    const baseScore = 10 - detection.riskFactors * 1.5;
-    const riskScore = Math.max(1, Math.min(10, baseScore));
+    const honeypotRisk = !liquidityLocked && (tokenData?.priceChange?.h24 || 0) > 100;
+    const priceManipulation = Math.abs(tokenData?.priceChange?.h24 || 0) > 40 || Math.abs(tokenData?.priceChange?.h1 || 0) > 15;
+    const volumeToMarketCapRatio = tokenData?.marketCap && tokenData?.volume?.h24 ? tokenData.volume.h24 / tokenData.marketCap : 0;
+
+    // Calculate a true 0-100 risk score
+    // Max possible risk factors from detection is roughly 12.
+    const riskFactorScoreBase = Math.min(100, (detection.riskFactors / 12) * 60); // worth 60%
+    const liquidityScore = tokenData?.liquidity?.usd ? Math.max(0, 20 - (tokenData.liquidity.usd / 500000) * 20) : 20; // up to 20%
+    const whaleScore = (whaleDistribution / 100) * 10; // up to 10%
+    const manipulationScore = (priceManipulation ? 5 : 0) + (honeypotRisk ? 5 : 0); // up to 10%
+    
+    let finalRiskPercent = Math.min(99, Math.round(riskFactorScoreBase + liquidityScore + whaleScore + manipulationScore));
+    
+    // Safety caps
+    if (!tokenData) finalRiskPercent = 100;
+    if (finalRiskPercent < 5) finalRiskPercent = 5 + Math.round(Math.random() * 5); // never 0
 
     let riskLevel: string;
-    if (riskScore >= 8) riskLevel = 'Low';
-    else if (riskScore >= 6) riskLevel = 'Medium';
-    else if (riskScore >= 3) riskLevel = 'High';
-    else riskLevel = 'Critical';
+    if (finalRiskPercent >= 75) riskLevel = 'Critical';
+    else if (finalRiskPercent >= 50) riskLevel = 'High';
+    else if (finalRiskPercent >= 25) riskLevel = 'Medium';
+    else riskLevel = 'Low';
+
+    const baseScore1to10 = Math.max(1, 10 - (finalRiskPercent / 10));
 
     return {
       tokenInfo: {
@@ -333,16 +366,18 @@ const Scanner = () => {
         priceChange24h: tokenData?.priceChange?.h24 ? `${tokenData.priceChange.h24.toFixed(2)}%` : 'N/A',
         ageHours: ageHours > 24 ? `${(ageHours / 24).toFixed(1)} days` : `${ageHours.toFixed(1)} hours`,
       },
-      riskScore: parseFloat(riskScore.toFixed(1)),
+      riskScore: parseFloat(baseScore1to10.toFixed(1)),
+      riskPercent: finalRiskPercent,
       riskLevel,
       pumpDumpDetection: detection.pumpDumpDetection,
       riskFactors: detection.riskFactors,
+      totalRiskFactors: 12, // approx max
       analysis: {
         liquidityLocked,
         whaleDistribution: parseFloat(whaleDistribution.toFixed(1)),
         honeypotRisk,
         priceManipulation,
-        rugPullRisk: Math.min(100, detection.riskFactors * 15 + (honeypotRisk ? 25 : 0)),
+        rugPullRisk: Math.min(100, Math.round((finalRiskPercent * 0.8) + (honeypotRisk ? 20 : 0))),
         volumeToMarketCapRatio: parseFloat(volumeToMarketCapRatio.toFixed(2)),
       },
       warnings: detection.warnings,
@@ -494,10 +529,10 @@ const Scanner = () => {
 
   const riskPercent = useMemo(() => {
     if (!scanResult) return 0;
-    return Math.round(((10 - scanResult.riskScore) / 9) * 100);
+    return scanResult.riskPercent; // We now compute 0-100% cleanly in the API response logic
   }, [scanResult]);
 
-  const primaryRiskBand = riskPercent < 34 ? 'SAFE' : riskPercent < 67 ? 'MEDIUM' : 'HIGH RISK';
+  const primaryRiskBand = riskPercent < 25 ? 'SAFE' : riskPercent < 50 ? 'MEDIUM' : riskPercent < 75 ? 'HIGH RISK' : 'CRITICAL RISK';
 
   const tokenAgeHours = useMemo(() => {
     if (!tokenSnapshot?.pairCreatedAt) return null;
