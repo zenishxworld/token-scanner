@@ -25,6 +25,34 @@ import {
   Zap,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
+
+const InfoRow = ({ label, value, tooltip, badge }: { label: string; value?: React.ReactNode; tooltip: string; badge?: React.ReactNode }) => (
+  <HoverCard>
+    <HoverCardTrigger asChild>
+      <div className="p-3 rounded bg-secondary/30 border border-border flex items-center justify-between cursor-help hover:bg-secondary/50 transition-colors duration-300 group gap-4 overflow-hidden">
+        <div className="flex items-center gap-1.5 text-muted-foreground group-hover:text-foreground transition-colors duration-300 whitespace-nowrap shrink-0">
+          <span>{label}</span>
+          <Info className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100 transition-opacity shrink-0" />
+        </div>
+        <div className="min-w-0 flex-1 flex justify-end">
+          {badge ? badge : <span className="font-medium truncate" title={typeof value === 'string' ? value : undefined}>{value}</span>}
+        </div>
+      </div>
+    </HoverCardTrigger>
+    <HoverCardContent side="top" className="w-80 bg-gradient-card border-purple-primary/30 shadow-[0_0_15px_rgba(124,58,237,0.1)] animate-in fade-in-0 zoom-in-95 duration-200 z-50">
+      <div className="space-y-2">
+        <h4 className="text-sm font-semibold flex items-center gap-2">
+          <Info className="h-4 w-4 text-purple-primary" />
+          {label}
+        </h4>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          {tooltip}
+        </p>
+      </div>
+    </HoverCardContent>
+  </HoverCard>
+);
 
 interface TokenData {
   chainId?: string;
@@ -525,28 +553,34 @@ const Scanner = () => {
       {
         label: 'Liquidity Lock Status',
         status: scanResult.analysis.liquidityLocked ? 'Safe' : 'Risky',
+        description: "Checks if the token's liquidity pool is locked. Unlocked liquidity allows creators to withdraw funds at any time, leading to a rug pull.",
       },
       {
         label: 'Top Holder Concentration',
         status: scanResult.analysis.whaleDistribution > 70 ? 'Risky' : scanResult.analysis.whaleDistribution > 45 ? 'Medium' : 'Safe',
+        description: "Analyzes the tokens held by top wallets. High concentration means a few holders can crash the price by dumping their tokens.",
       },
       {
         label: 'Creator Wallet Behavior',
         status: scanResult.analysis.honeypotRisk ? 'Risky' : scanResult.analysis.rugPullRisk > 45 ? 'Medium' : 'Safe',
+        description: "Monitors the creator's wallet for red flags, like minting extra tokens or dumping large amounts shortly after launch.",
       },
       {
         label: 'Transaction Pattern Analysis',
         status: scanResult.analysis.priceManipulation ? 'Risky' : scanResult.analysis.volumeToMarketCapRatio > 1.4 ? 'Medium' : 'Safe',
+        description: "Detects fake volume generation (wash trading) or sudden artificial price pumps designed to trap new buyers.",
       },
       {
         label: 'Token Age Risk',
         status: tokenAgeStatus,
+        description: "Evaluates the risk based on creation date. Newly deployed tokens have a significantly higher probability of being scams.",
       },
       {
         label: 'Contract Verification',
         status: contractVerificationStatus,
+        description: "Checks if the smart contract code is verified and audited. Unverified contracts often hide honeypots or malicious code.",
       },
-    ] as Array<{ label: string; status: 'Safe' | 'Medium' | 'Risky' }>;
+    ] as Array<{ label: string; status: 'Safe' | 'Medium' | 'Risky'; description: string }>;
   }, [scanResult, tokenAgeHours]);
 
   const verdictReasons = useMemo(() => {
@@ -783,10 +817,28 @@ const Scanner = () => {
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                       {riskIndicators.map((indicator) => (
-                        <div key={indicator.label} className="p-4 rounded-lg bg-secondary/30 border border-border">
-                          <p className="text-sm text-muted-foreground mb-2">{indicator.label}</p>
-                          <Badge className={getRiskBadgeClass(indicator.status)}>{indicator.status}</Badge>
-                        </div>
+                        <HoverCard key={indicator.label}>
+                          <HoverCardTrigger asChild>
+                            <div className="p-4 rounded-lg bg-secondary/30 border border-border cursor-help hover:bg-secondary/50 transition-colors duration-300 group">
+                              <div className="flex justify-between items-start mb-2 text-muted-foreground group-hover:text-foreground transition-colors duration-300">
+                                <p className="text-sm">{indicator.label}</p>
+                                <Info className="h-4 w-4 opacity-50 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                              <Badge className={getRiskBadgeClass(indicator.status)}>{indicator.status}</Badge>
+                            </div>
+                          </HoverCardTrigger>
+                          <HoverCardContent side="top" className="w-80 bg-gradient-card border-purple-primary/30 shadow-[0_0_15px_rgba(124,58,237,0.1)] p-4 animate-in fade-in-0 zoom-in-95 duration-200 z-50">
+                            <div className="space-y-2">
+                              <h4 className="text-sm font-semibold flex items-center gap-2">
+                                <Shield className="h-4 w-4 text-purple-primary" />
+                                {indicator.label}
+                              </h4>
+                              <p className="text-sm text-muted-foreground leading-relaxed">
+                                {indicator.description}
+                              </p>
+                            </div>
+                          </HoverCardContent>
+                        </HoverCard>
                       ))}
                     </div>
                   </CardContent>
@@ -835,24 +887,26 @@ const Scanner = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <div className="p-3 rounded bg-secondary/30 border border-border flex items-center justify-between">
-                        <span className="text-muted-foreground">Liquidity Pool</span>
-                        <span className="font-medium">{tokenSnapshot?.dexId?.toUpperCase() ?? 'Unknown DEX Pool'}</span>
-                      </div>
-                      <div className="p-3 rounded bg-secondary/30 border border-border flex items-center justify-between">
-                        <span className="text-muted-foreground">Liquidity Value</span>
-                        <span className="font-medium">{scanResult.tokenInfo.liquidity}</span>
-                      </div>
-                      <div className="p-3 rounded bg-secondary/30 border border-border flex items-center justify-between">
-                        <span className="text-muted-foreground">Liquidity Locked</span>
-                        <Badge className={scanResult.analysis.liquidityLocked ? 'bg-neon-green/20 text-neon-green border-neon-green/40' : 'bg-red-500/20 text-red-400 border-red-400/40'}>
-                          {scanResult.analysis.liquidityLocked ? 'Yes' : 'No'}
-                        </Badge>
-                      </div>
-                      <div className="p-3 rounded bg-secondary/30 border border-border flex items-center justify-between">
-                        <span className="text-muted-foreground">Lock Duration</span>
-                        <span className="font-medium">{scanResult.analysis.liquidityLocked ? (scanResult.riskFactors <= 1 ? '12 months' : '6 months') : 'Not locked'}</span>
-                      </div>
+                      <InfoRow
+                        label="Liquidity Pool"
+                        value={tokenSnapshot?.dexId?.toUpperCase() ?? 'Unknown DEX Pool'}
+                        tooltip="The decentralized exchange (DEX) where this token's liquidity is primarily hosted (e.g., Uniswap, PancakeSwap)."
+                      />
+                      <InfoRow
+                        label="Liquidity Value"
+                        value={scanResult.tokenInfo.liquidity}
+                        tooltip="Total USD value of assets in the liquidity pool. Low liquidity leads to high price impact and slippage."
+                      />
+                      <InfoRow
+                        label="Liquidity Locked"
+                        badge={<Badge className={scanResult.analysis.liquidityLocked ? 'bg-neon-green/20 text-neon-green border-neon-green/40' : 'bg-red-500/20 text-red-400 border-red-400/40'}>{scanResult.analysis.liquidityLocked ? 'Yes' : 'No'}</Badge>}
+                        tooltip="Whether the liquidity pool tokens are locked in a smart contract. If not locked, developers can remove all funds anytime."
+                      />
+                      <InfoRow
+                        label="Lock Duration"
+                        value={scanResult.analysis.liquidityLocked ? (scanResult.riskFactors <= 1 ? '12 months' : '6 months') : 'Not locked'}
+                        tooltip="The time remaining until the liquidity lock expires. Longer lock periods indicate more commitment and lower short-term risk."
+                      />
                       {!scanResult.analysis.liquidityLocked && (
                         <div className="p-3 rounded bg-red-500/10 border border-red-400/40 text-red-300 text-sm flex items-start gap-2">
                           <AlertTriangle className="h-4 w-4 mt-0.5" />
@@ -872,24 +926,26 @@ const Scanner = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <div className="p-3 rounded bg-secondary/30 border border-border flex items-center justify-between">
-                        <span className="text-muted-foreground">Creator Wallet Holdings</span>
-                        <span className="font-medium">{Math.round(scanResult.analysis.whaleDistribution)}% concentration signal</span>
-                      </div>
-                      <div className="p-3 rounded bg-secondary/30 border border-border flex items-center justify-between">
-                        <span className="text-muted-foreground">Recent Sell Transactions</span>
-                        <span className="font-medium">{sellCount}</span>
-                      </div>
-                      <div className="p-3 rounded bg-secondary/30 border border-border flex items-center justify-between">
-                        <span className="text-muted-foreground">Wallet Age</span>
-                        <span className="font-medium">{tokenAgeHours ? `${Math.max(1, Math.round(tokenAgeHours / 24))} days` : 'Unknown'}</span>
-                      </div>
-                      <div className="p-3 rounded bg-secondary/30 border border-border flex items-center justify-between">
-                        <span className="text-muted-foreground">Suspicious Activity Detection</span>
-                        <Badge className={scanResult.analysis.honeypotRisk || scanResult.analysis.rugPullRisk > 55 ? 'bg-red-500/20 text-red-400 border-red-400/40' : 'bg-neon-green/20 text-neon-green border-neon-green/40'}>
-                          {scanResult.analysis.honeypotRisk || scanResult.analysis.rugPullRisk > 55 ? 'Warning' : 'No Major Flag'}
-                        </Badge>
-                      </div>
+                      <InfoRow
+                        label="Creator Wallet Holdings"
+                        value={`${Math.round(scanResult.analysis.whaleDistribution)}% concentration signal`}
+                        tooltip="Percentage of the total token supply still controlled by the creator. A high percentage gives them the power to crash the token's price."
+                      />
+                      <InfoRow
+                        label="Recent Sell Transactions"
+                        value={sellCount}
+                        tooltip="Number of times the creator has sold tokens recently. Frequent sells could indicate they are dumping the token."
+                      />
+                      <InfoRow
+                        label="Wallet Age"
+                        value={tokenAgeHours ? `${Math.max(1, Math.round(tokenAgeHours / 24))} days` : 'Unknown'}
+                        tooltip="Age of the creator's wallet. Newly created wallets matching the token's age are often used by serial scammers."
+                      />
+                      <InfoRow
+                        label="Suspicious Activity Detection"
+                        badge={<Badge className={scanResult.analysis.honeypotRisk || scanResult.analysis.rugPullRisk > 55 ? 'bg-red-500/20 text-red-400 border-red-400/40' : 'bg-neon-green/20 text-neon-green border-neon-green/40'}>{scanResult.analysis.honeypotRisk || scanResult.analysis.rugPullRisk > 55 ? 'Warning' : 'No Major Flag'}</Badge>}
+                        tooltip="Our AI models cross-referencing this wallet's behavior with known malicious patterns, such as prior rug pulls or honeypots."
+                      />
                     </CardContent>
                   </Card>
 
@@ -901,24 +957,26 @@ const Scanner = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <div className="p-3 rounded bg-secondary/30 border border-border flex items-center justify-between">
-                        <span className="text-muted-foreground">24h Buy Count</span>
-                        <span className="font-medium">{buyCount}</span>
-                      </div>
-                      <div className="p-3 rounded bg-secondary/30 border border-border flex items-center justify-between">
-                        <span className="text-muted-foreground">24h Sell Count</span>
-                        <span className="font-medium">{sellCount}</span>
-                      </div>
-                      <div className="p-3 rounded bg-secondary/30 border border-border flex items-center justify-between">
-                        <span className="text-muted-foreground">Whale Transactions</span>
-                        <span className="font-medium">{whaleTransactions}</span>
-                      </div>
-                      <div className="p-3 rounded bg-secondary/30 border border-border flex items-center justify-between">
-                        <span className="text-muted-foreground">Volume Spike Detection</span>
-                        <Badge className={scanResult.analysis.volumeToMarketCapRatio > 1.5 ? 'bg-warning-orange/20 text-warning-orange border-warning-orange/40' : 'bg-neon-green/20 text-neon-green border-neon-green/40'}>
-                          {scanResult.analysis.volumeToMarketCapRatio > 1.5 ? 'Detected' : 'Normal'}
-                        </Badge>
-                      </div>
+                      <InfoRow
+                        label="24h Buy Count"
+                        value={buyCount}
+                        tooltip="Total number of unique buy orders in the past 24 hours. A healthy token shows steady buy activity without strange bursts."
+                      />
+                      <InfoRow
+                        label="24h Sell Count"
+                        value={sellCount}
+                        tooltip="Total number of unique sell orders in the past 24 hours. A disproportionately high sell count may indicate dumping."
+                      />
+                      <InfoRow
+                        label="Whale Transactions"
+                        value={whaleTransactions}
+                        tooltip="Volume of huge buy or sell orders made by whales. These large trades can massively impact the price of the token in either direction."
+                      />
+                      <InfoRow
+                        label="Volume Spike Detection"
+                        badge={<Badge className={scanResult.analysis.volumeToMarketCapRatio > 1.5 ? 'bg-warning-orange/20 text-warning-orange border-warning-orange/40' : 'bg-neon-green/20 text-neon-green border-neon-green/40'}>{scanResult.analysis.volumeToMarketCapRatio > 1.5 ? 'Detected' : 'Normal'}</Badge>}
+                        tooltip="Detects abnormal bursts of trading volume. This very often happens before manipulative pump schemes."
+                      />
                     </CardContent>
                   </Card>
                 </div>
@@ -948,15 +1006,15 @@ const Scanner = () => {
                     </CardContent>
                   </Card>
 
-                  <Card className="bg-gradient-card border-border">
+                  <Card className="bg-gradient-card border-border h-full flex flex-col">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Shield className="h-5 w-5 text-purple-primary" />
                         Web3 Security Insight
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="h-full flex flex-col justify-start pb-6">
-                       <div className="p-5 rounded-lg bg-purple-primary/10 border border-purple-primary/30 relative overflow-hidden h-full flex items-center mt-2">
+                    <CardContent className="flex-1 flex flex-col justify-start pb-6">
+                       <div className="flex-1 p-5 rounded-lg bg-purple-primary/10 border border-purple-primary/30 relative overflow-hidden flex items-center mt-2 min-h-[140px]">
                          <div className="absolute top-1/2 -translate-y-1/2 right-0 p-2 opacity-[0.05]">
                            <Shield className="h-32 w-32" />
                          </div>
