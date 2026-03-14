@@ -34,7 +34,8 @@ const Footer = () => {
           <h3 className="font-semibold mb-4">Credits</h3>
           <div className="space-y-1">
             <div>Zenish Patel – Developer & System Designer</div>
-            <div>Moksh Patel – Research & Documentation</div>
+            <div>Preyas Pandya – Research & Documentation</div>
+            <div>Hensu Patel – Frontend & UI/UX Designer</div>
           </div>
         </div>
       </div>
