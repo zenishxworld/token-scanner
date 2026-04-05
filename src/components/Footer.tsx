@@ -34,14 +34,13 @@ const Footer = () => {
           <h3 className="font-semibold mb-4">Credits</h3>
           <div className="space-y-1">
             <div>Zenish Patel – Developer & System Designer</div>
-            <div>Preyas Pandya – Research & Documentation</div>
-            <div>Hensu Patel – Frontend & UI/UX Designer</div>
+
           </div>
         </div>
       </div>
       <hr className="border-border" />
       <div className="py-4 text-center text-xs text-muted-foreground">
-        © 2026 TokenShield AI. Build for Tech Arambh 2.0. Team ApexDeploy.
+        © 2026 TokenShield AI.
       </div>
     </footer>
   );
